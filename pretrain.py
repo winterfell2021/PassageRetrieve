@@ -34,7 +34,8 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=str, dest="output_dir",
                         default='./output/', help='work dir')
     parser.add_argument('--model', type=str,
-                        default='roformer', help='model name')
+                        default='roformer_v2', help='model name')
+    parser.add_argument('--config', dest="config_name", type=str, default="./config/roformer_v2_large/")
     parser.add_argument('-b', '--batch-size', dest="train_batch_size",
                         type=int, default=16, help='batch size')
     parser.add_argument("--local_rank", type=int, default=-1,
@@ -51,6 +52,8 @@ if __name__ == '__main__':
     
     for key, value in vars(args).items():
         train_args[key] = value
+    train_args['tokenizer_name'] = train_args['config_name']
+    train_args['config_name'] = train_args['config_name']
     train_args['best_model_dir'] = os.path.join(train_args['output_dir'], 'best_model')
     model = LanguageModelingModel(
         args.model,
