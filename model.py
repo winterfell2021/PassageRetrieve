@@ -470,10 +470,10 @@ class LanguageModelingModel:
             )
 
         if self.args.local_rank in [-1, 0]:
-            logger.info("move model to device")
+            logger.info("Move model to device")
         self._move_model_to_device()
         if self.args.local_rank in [-1, 0]:
-            logger.info("loading and cache examples")
+            logger.info("Loading and cache examples")
         train_dataset = self.load_and_cache_examples(
             train_file, verbose=verbose)
 
@@ -569,7 +569,7 @@ class LanguageModelingModel:
                 * args.num_train_epochs
             )
         if self.args.local_rank in [-1, 0]:
-            logger.info("building optimizer")
+            logger.info("Building optimizer")
         no_decay = ["bias", "LayerNorm.weight"]
 
         optimizer_grouped_parameters = []
