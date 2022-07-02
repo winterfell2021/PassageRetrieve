@@ -3,6 +3,72 @@
 
 
 from __future__ import absolute_import, division, print_function
+from simpletransformers.language_modeling.language_modeling_utils import (
+    SimpleDataset,
+    load_hf_dataset,
+    mask_tokens,
+)
+from simpletransformers.custom_models.models import ElectraForLanguageModelingModel
+from simpletransformers.config.utils import sweep_config_to_sweep_values
+from simpletransformers.config.model_args import LanguageModelingArgs
+from simpletransformers.config.global_args import global_args
+from transformers.data.datasets.language_modeling import (
+    LineByLineTextDataset,
+    TextDataset,
+)
+from roformer import (
+    RoFormerForMaskedLM as RoFormerV2ForMaskedLM,
+    RoFormerConfig as RoFormerV2Config,
+    RoFormerTokenizer as RoFormerV2Tokenizer
+)
+from transformers import (
+    WEIGHTS_NAME,
+    AutoConfig,
+    AutoModelWithLMHead,
+    AutoTokenizer,
+    BertConfig,
+    BertForMaskedLM,
+    BertTokenizer,
+    BigBirdConfig,
+    BigBirdForMaskedLM,
+    BigBirdTokenizer,
+    CamembertConfig,
+    CamembertForMaskedLM,
+    CamembertTokenizer,
+    DistilBertConfig,
+    DistilBertForMaskedLM,
+    DistilBertTokenizer,
+    ElectraConfig,
+    ElectraForMaskedLM,
+    ElectraForPreTraining,
+    ElectraTokenizer,
+    GPT2Config,
+    GPT2LMHeadModel,
+    GPT2Tokenizer,
+    LongformerConfig,
+    LongformerForMaskedLM,
+    LongformerTokenizer,
+    NystromformerConfig,
+    NystromformerForMaskedLM,
+    # NystromformerTokenizer,
+    OpenAIGPTConfig,
+    OpenAIGPTLMHeadModel,
+    OpenAIGPTTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+    RemBertConfig,
+    RemBertForMaskedLM,
+    RemBertTokenizer,
+    RobertaConfig,
+    RobertaForMaskedLM,
+    RobertaTokenizer,
+    XLMRobertaConfig,
+    XLMRobertaForMaskedLM,
+    XLMRobertaTokenizer,
+    RoFormerConfig,
+    RoFormerForMaskedLM,
+    RoFormerTokenizer,
+)
 
 import json
 import logging
@@ -54,69 +120,6 @@ class NystromformerTokenizer(metaclass=DummyObject):
         requires_backends(self, ["sentencepiece"])
 
 
-from transformers import (
-    WEIGHTS_NAME,
-    AutoConfig,
-    AutoModelWithLMHead,
-    AutoTokenizer,
-    BertConfig,
-    BertForMaskedLM,
-    BertTokenizer,
-    BigBirdConfig,
-    BigBirdForMaskedLM,
-    BigBirdTokenizer,
-    CamembertConfig,
-    CamembertForMaskedLM,
-    CamembertTokenizer,
-    DistilBertConfig,
-    DistilBertForMaskedLM,
-    DistilBertTokenizer,
-    ElectraConfig,
-    ElectraForMaskedLM,
-    ElectraForPreTraining,
-    ElectraTokenizer,
-    GPT2Config,
-    GPT2LMHeadModel,
-    GPT2Tokenizer,
-    LongformerConfig,
-    LongformerForMaskedLM,
-    LongformerTokenizer,
-    NystromformerConfig,
-    NystromformerForMaskedLM,
-    # NystromformerTokenizer,
-    OpenAIGPTConfig,
-    OpenAIGPTLMHeadModel,
-    OpenAIGPTTokenizer,
-    PreTrainedModel,
-    PreTrainedTokenizer,
-    RemBertConfig,
-    RemBertForMaskedLM,
-    RemBertTokenizer,
-    RobertaConfig,
-    RobertaForMaskedLM,
-    RobertaTokenizer,
-    XLMRobertaConfig,
-    XLMRobertaForMaskedLM,
-    XLMRobertaTokenizer,
-    RoFormerConfig,
-    RoFormerForMaskedLM,
-    RoFormerTokenizer,
-)
-from transformers.data.datasets.language_modeling import (
-    LineByLineTextDataset,
-    TextDataset,
-)
-
-from simpletransformers.config.global_args import global_args
-from simpletransformers.config.model_args import LanguageModelingArgs
-from simpletransformers.config.utils import sweep_config_to_sweep_values
-from simpletransformers.custom_models.models import ElectraForLanguageModelingModel
-from simpletransformers.language_modeling.language_modeling_utils import (
-    SimpleDataset,
-    load_hf_dataset,
-    mask_tokens,
-)
-
 try:
     import wandb
 
@@ -141,6 +144,7 @@ MODEL_CLASSES = {
     "roberta": (RobertaConfig, RobertaForMaskedLM, RobertaTokenizer),
     "xlmroberta": (XLMRobertaConfig, XLMRobertaForMaskedLM, XLMRobertaTokenizer),
     "roformer": (RoFormerConfig, RoFormerForMaskedLM, RoFormerTokenizer),
+    "roformer_v2": (RoFormerV2Config, RoFormerV2ForMaskedLM, RoFormerV2Tokenizer),
 }
 
 
@@ -157,7 +161,6 @@ class LanguageModelingModel:
         cuda_device=-1,
         **kwargs,
     ):
-
         """
         Initializes a LanguageModelingModel.
 
@@ -268,7 +271,8 @@ class LanguageModelingModel:
 
         if self.args.model_type == "electra":
             if generator_name:
-                self.generator_config = ElectraConfig.from_pretrained(generator_name)
+                self.generator_config = ElectraConfig.from_pretrained(
+                    generator_name)
             elif self.args.model_name:
                 self.generator_config = ElectraConfig.from_pretrained(
                     os.path.join(self.args.model_name, "generator_config"),
@@ -311,7 +315,8 @@ class LanguageModelingModel:
         if self.args.model_name:
             if self.args.model_type == "electra":
                 if self.args.model_name == "electra":
-                    generator_model = ElectraForMaskedLM.from_pretrained(generator_name)
+                    generator_model = ElectraForMaskedLM.from_pretrained(
+                        generator_name)
                     discriminator_model = ElectraForPreTraining.from_pretrained(
                         discriminator_name
                     )
@@ -328,14 +333,16 @@ class LanguageModelingModel:
                         if hasattr(self.model.generator_model, "module")
                         else self.model.generator_model
                     )
-                    model_to_resize.resize_token_embeddings(len(self.tokenizer))
+                    model_to_resize.resize_token_embeddings(
+                        len(self.tokenizer))
 
                     model_to_resize = (
                         self.model.discriminator_model.module
                         if hasattr(self.model.discriminator_model, "module")
                         else self.model.discriminator_model
                     )
-                    model_to_resize.resize_token_embeddings(len(self.tokenizer))
+                    model_to_resize.resize_token_embeddings(
+                        len(self.tokenizer))
                     self.model.generator_model = generator_model
                     self.model.discriminator_model = discriminator_model
                 else:
@@ -349,7 +356,8 @@ class LanguageModelingModel:
                     )
                     self.model.load_state_dict(
                         torch.load(
-                            os.path.join(self.args.model_name, "pytorch_model.bin"),
+                            os.path.join(self.args.model_name,
+                                         "pytorch_model.bin"),
                             map_location=self.device,
                         )
                     )
@@ -363,7 +371,8 @@ class LanguageModelingModel:
         else:
             logger.info(" Training language model from scratch")
             if self.args.model_type == "electra":
-                generator_model = ElectraForMaskedLM(config=self.generator_config)
+                generator_model = ElectraForMaskedLM(
+                    config=self.generator_config)
                 discriminator_model = ElectraForPreTraining(
                     config=self.discriminator_config
                 )
@@ -391,7 +400,8 @@ class LanguageModelingModel:
             else:
                 self.model = model_class(config=self.config)
                 model_to_resize = (
-                    self.model.module if hasattr(self.model, "module") else self.model
+                    self.model.module if hasattr(
+                        self.model, "module") else self.model
                 )
                 model_to_resize.resize_token_embeddings(len(self.tokenizer))
 
@@ -455,7 +465,8 @@ class LanguageModelingModel:
         ):
             raise ValueError(
                 "Output directory ({}) already exists and is not empty."
-                " Set args.overwrite_output_dir = True to overcome.".format(output_dir)
+                " Set args.overwrite_output_dir = True to overcome.".format(
+                    output_dir)
             )
 
         if self.args.local_rank in [-1, 0]:
@@ -463,7 +474,8 @@ class LanguageModelingModel:
         self._move_model_to_device()
         if self.args.local_rank in [-1, 0]:
             logger.info("loading and cache examples")
-        train_dataset = self.load_and_cache_examples(train_file, verbose=verbose)
+        train_dataset = self.load_and_cache_examples(
+            train_file, verbose=verbose)
 
         os.makedirs(output_dir, exist_ok=True)
 
@@ -689,7 +701,8 @@ class LanguageModelingModel:
             )
 
         else:
-            raise ValueError("{} is not a valid scheduler.".format(args.scheduler))
+            raise ValueError(
+                "{} is not a valid scheduler.".format(args.scheduler))
         if (
             args.model_name
             and os.path.isfile(os.path.join(args.model_name, "optimizer.pt"))
@@ -751,8 +764,10 @@ class LanguageModelingModel:
                 logger.info(
                     "   Continuing training from checkpoint, will skip to saved global_step"
                 )
-                logger.info("   Continuing training from epoch %d", epochs_trained)
-                logger.info("   Continuing training from global step %d", global_step)
+                logger.info("   Continuing training from epoch %d",
+                            epochs_trained)
+                logger.info(
+                    "   Continuing training from global step %d", global_step)
                 logger.info(
                     "   Will skip the first %d steps in the current epoch",
                     steps_trained_in_current_epoch,
@@ -761,7 +776,8 @@ class LanguageModelingModel:
                 logger.info("   Starting fine-tuning.")
 
         if args.evaluate_during_training:
-            training_progress_scores = self._create_training_progress_scores(**kwargs)
+            training_progress_scores = self._create_training_progress_scores(
+                **kwargs)
 
         if args.wandb_project:
             wandb.init(
@@ -803,7 +819,8 @@ class LanguageModelingModel:
                     batch = batch["input_ids"]
 
                 inputs, labels = (
-                    mask_tokens(batch, tokenizer, args) if args.mlm else (batch, batch)
+                    mask_tokens(batch, tokenizer, args) if args.mlm else (
+                        batch, batch)
                 )
                 inputs = inputs.to(self.device)
                 labels = labels.to(self.device)
@@ -811,7 +828,8 @@ class LanguageModelingModel:
                 if args.fp16:
                     with amp.autocast():
                         if args.model_type == "longformer":
-                            outputs = model(inputs, attention_mask=None, labels=labels)
+                            outputs = model(
+                                inputs, attention_mask=None, labels=labels)
                         else:
                             outputs = (
                                 model(inputs, labels=labels)
@@ -827,7 +845,8 @@ class LanguageModelingModel:
                             loss = outputs[0]
                 else:
                     if args.model_type == "longformer":
-                        outputs = model(inputs, attention_mask=None, labels=labels)
+                        outputs = model(
+                            inputs, attention_mask=None, labels=labels)
                     else:
                         outputs = (
                             model(inputs, labels=labels)
@@ -932,7 +951,8 @@ class LanguageModelingModel:
                             for key, value in results.items():
                                 try:
                                     tb_writer.add_scalar(
-                                        "eval_{}".format(key), value, global_step
+                                        "eval_{}".format(
+                                            key), value, global_step
                                     )
                                 except (NotImplementedError, AssertionError):
                                     pass
@@ -950,8 +970,10 @@ class LanguageModelingModel:
                                 results=results,
                             )
 
-                        training_progress_scores["global_step"].append(global_step)
-                        training_progress_scores["train_loss"].append(current_loss)
+                        training_progress_scores["global_step"].append(
+                            global_step)
+                        training_progress_scores["train_loss"].append(
+                            current_loss)
                         for key in results:
                             training_progress_scores[key].append(results[key])
                         report = pd.DataFrame(training_progress_scores)
@@ -963,7 +985,8 @@ class LanguageModelingModel:
                         )
 
                         if args.wandb_project or self.is_sweeping:
-                            wandb.log(self._get_last_metrics(training_progress_scores))
+                            wandb.log(self._get_last_metrics(
+                                training_progress_scores))
 
                         if not best_eval_metric:
                             best_eval_metric = results[args.early_stopping_metric]
@@ -976,7 +999,8 @@ class LanguageModelingModel:
                             )
                         if best_eval_metric and args.early_stopping_metric_minimize:
                             if (
-                                results[args.early_stopping_metric] - best_eval_metric
+                                results[args.early_stopping_metric] -
+                                    best_eval_metric
                                 < args.early_stopping_delta
                             ):
                                 best_eval_metric = results[args.early_stopping_metric]
@@ -1010,7 +1034,8 @@ class LanguageModelingModel:
                                             logger.info(
                                                 f" Patience of {args.early_stopping_patience} steps reached."
                                             )
-                                            logger.info(" Training terminated.")
+                                            logger.info(
+                                                " Training terminated.")
                                             train_iterator.close()
                                         return (
                                             global_step,
@@ -1020,7 +1045,8 @@ class LanguageModelingModel:
                                         )
                         else:
                             if (
-                                results[args.early_stopping_metric] - best_eval_metric
+                                results[args.early_stopping_metric] -
+                                    best_eval_metric
                                 > args.early_stopping_delta
                             ):
                                 best_eval_metric = results[args.early_stopping_metric]
@@ -1054,7 +1080,8 @@ class LanguageModelingModel:
                                             logger.info(
                                                 f" Patience of {args.early_stopping_patience} steps reached."
                                             )
-                                            logger.info(" Training terminated.")
+                                            logger.info(
+                                                " Training terminated.")
                                             train_iterator.close()
                                         return (
                                             global_step,
@@ -1074,14 +1101,16 @@ class LanguageModelingModel:
 
             epoch_number += 1
             output_dir_current = os.path.join(
-                output_dir, "checkpoint-{}-epoch-{}".format(global_step, epoch_number)
+                output_dir, "checkpoint-{}-epoch-{}".format(
+                    global_step, epoch_number)
             )
 
             if args.save_model_every_epoch or args.evaluate_during_training:
                 os.makedirs(output_dir_current, exist_ok=True)
 
             if args.save_model_every_epoch:
-                self.save_model(output_dir_current, optimizer, scheduler, model=model)
+                self.save_model(output_dir_current, optimizer,
+                                scheduler, model=model)
 
             if args.evaluate_during_training and args.evaluate_each_epoch:
                 results = self.eval_model(
@@ -1101,7 +1130,8 @@ class LanguageModelingModel:
                     training_progress_scores[key].append(results[key])
                 report = pd.DataFrame(training_progress_scores)
                 report.to_csv(
-                    os.path.join(args.output_dir, "training_progress_scores.csv"),
+                    os.path.join(args.output_dir,
+                                 "training_progress_scores.csv"),
                     index=False,
                 )
 
@@ -1307,7 +1337,8 @@ class LanguageModelingModel:
                 batch = batch["input_ids"]
 
             inputs, labels = (
-                mask_tokens(batch, tokenizer, args) if args.mlm else (batch, batch)
+                mask_tokens(batch, tokenizer, args) if args.mlm else (
+                    batch, batch)
             )
             inputs = inputs.to(self.device)
             labels = labels.to(self.device)
@@ -1391,14 +1422,16 @@ class LanguageModelingModel:
                     self.args.max_seq_length = (
                         509
                         if bool(
-                            args.model_type in ["roberta", "camembert", "xlmroberta"]
+                            args.model_type in ["roberta",
+                                                "camembert", "xlmroberta"]
                         )
                         else 510
                     )
                     self.args.block_size = (
                         509
                         if bool(
-                            args.model_type in ["roberta", "camembert", "xlmroberta"]
+                            args.model_type in ["roberta",
+                                                "camembert", "xlmroberta"]
                         )
                         else 510
                     )
@@ -1455,7 +1488,8 @@ class LanguageModelingModel:
                 strip_accents=self.args.strip_accents,
                 lowercase=self.args.do_lower_case,
             )
-            self.args.special_tokens = ["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"]
+            self.args.special_tokens = [
+                "[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"]
             self.args.wordpieces_prefix = "##"
 
             tokenizer.train(
@@ -1515,7 +1549,8 @@ class LanguageModelingModel:
                 os.remove(output_dir + "/" + f"{prefix}.vocab")
             shutil.move(src=f"{prefix}.vocab", dst=output_dir)
         else:
-            tokenizer = ByteLevelBPETokenizer(lowercase=self.args.do_lower_case)
+            tokenizer = ByteLevelBPETokenizer(
+                lowercase=self.args.do_lower_case)
 
             tokenizer.train(
                 files=train_files,
@@ -1547,17 +1582,20 @@ class LanguageModelingModel:
                         if hasattr(self.model.generator_model, "module")
                         else self.model.generator_model
                     )
-                    model_to_resize.resize_token_embeddings(len(self.tokenizer))
+                    model_to_resize.resize_token_embeddings(
+                        len(self.tokenizer))
 
                     model_to_resize = (
                         self.model.discriminator_model.module
                         if hasattr(self.model.discriminator_model, "module")
                         else self.model.discriminator_model
                     )
-                    model_to_resize.resize_token_embeddings(len(self.tokenizer))
+                    model_to_resize.resize_token_embeddings(
+                        len(self.tokenizer))
 
                 model_to_resize = (
-                    self.model.module if hasattr(self.model, "module") else self.model
+                    self.model.module if hasattr(
+                        self.model, "module") else self.model
                 )
 
                 model_to_resize.resize_token_embeddings(len(self.tokenizer))
@@ -1580,13 +1618,15 @@ class LanguageModelingModel:
                 model_to_save.save_pretrained(output_dir)
                 self.tokenizer.save_pretrained(output_dir)
         else:
-            raise ValueError("Model must be of ElectraForLanguageModelingModel type")
+            raise ValueError(
+                "Model must be of ElectraForLanguageModelingModel type")
 
     def save_generator(self, output_dir=None):
         if self.args.model_type == "electra":
             if not self.args.no_save:
                 if not output_dir:
-                    output_dir = os.path.join(self.args.output_dir, "generator_model")
+                    output_dir = os.path.join(
+                        self.args.output_dir, "generator_model")
                 os.makedirs(output_dir, exist_ok=True)
                 model_to_save = (
                     self.model.generator_model.module
@@ -1596,7 +1636,8 @@ class LanguageModelingModel:
                 model_to_save.save_pretrained(output_dir)
                 self.tokenizer.save_pretrained(output_dir)
         else:
-            raise ValueError("Model must be of ElectraForLanguageModelingModel type")
+            raise ValueError(
+                "Model must be of ElectraForLanguageModelingModel type")
 
     def _threshold(self, x, threshold):
         if x >= threshold:
@@ -1634,7 +1675,8 @@ class LanguageModelingModel:
             # Take care of distributed/parallel training
             model_to_save = model.module if hasattr(model, "module") else model
             if self.args.model_type in "electra":
-                os.makedirs(os.path.join(output_dir, "generator_config"), exist_ok=True)
+                os.makedirs(os.path.join(
+                    output_dir, "generator_config"), exist_ok=True)
                 os.makedirs(
                     os.path.join(output_dir, "discriminator_config"), exist_ok=True
                 )
@@ -1646,7 +1688,8 @@ class LanguageModelingModel:
                 )
             model_to_save.save_pretrained(output_dir)
             self.tokenizer.save_pretrained(output_dir)
-            torch.save(self.args, os.path.join(output_dir, "training_args.bin"))
+            torch.save(self.args, os.path.join(
+                output_dir, "training_args.bin"))
             if optimizer and scheduler and self.args.save_optimizer_and_scheduler:
                 torch.save(
                     optimizer.state_dict(), os.path.join(output_dir, "optimizer.pt")
