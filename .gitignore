@@ -1,6 +1,7 @@
-data/*
-output/*
-cache_dir
 __pycache__
-test.ipynb
-runs
+cache_dir/*
+data/*
+output
+wandb
+*txt
+*ipynb
