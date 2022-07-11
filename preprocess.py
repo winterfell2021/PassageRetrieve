@@ -6,7 +6,7 @@ if __name__ == '__main__':
     data_list = []
 
     for name in ["train", "dev", "test"]:
-        with open(join(data_dir, "News2022_{}.tsv".format(name)), "r", encoding="utf8") as fr:
+        with open(join(data_dir, "News2022_task2_{}.tsv".format(name)), "r", encoding="utf8") as fr:
             for line in tqdm(fr):
                 if 'query' in line:
                     continue
@@ -14,7 +14,7 @@ if __name__ == '__main__':
                     " ".join(line.strip().split("\t")[-1].strip().split(" ")[:int(maxlen * 1.1)]))
 
     print(data_list[0])
-    with open("data/News2022_doc.tsv", "r", encoding="utf8") as fr:
+    with open("data/News2022_doc_B.tsv", "r", encoding="utf8") as fr:
         for line in tqdm(fr):
             data_list.append(" ".join(line.strip().split(
                 "\t")[-1].strip().split(" ")[:int(maxlen * 1.1)]))

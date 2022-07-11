@@ -417,6 +417,9 @@ class LanguageModelingModel:
                 "wandb_project specified but wandb is not available. Wandb disabled."
             )
             self.args.wandb_project = None
+            
+        if self.args.local_rank not in [-1, 0]:
+            self.args.wandb_project = None
 
     def train_model(
         self,
@@ -877,6 +880,7 @@ class LanguageModelingModel:
                     batch_iterator.set_description(
                         f"Epochs {epoch_number}/{args.num_train_epochs}. Running Loss: {current_loss:9.4f}"
                     )
+                    
 
                 if args.gradient_accumulation_steps > 1:
                     loss = loss / args.gradient_accumulation_steps
@@ -919,10 +923,11 @@ class LanguageModelingModel:
                         if args.wandb_project or self.is_sweeping:
                             wandb.log(
                                 {
-                                    "Training loss": current_loss,
+                                    "train/loss": current_loss,
                                     "lr": scheduler.get_last_lr()[0],
-                                    "global_step": global_step,
-                                }
+                                    "epoch": epoch_number + 1,
+                                },
+                                step=global_step,
                             )
 
                     if args.save_steps > 0 and global_step % args.save_steps == 0:
@@ -1481,7 +1486,8 @@ class LanguageModelingModel:
         if not output_dir:
             output_dir = self.args.output_dir
 
-        if self.args.model_type in ["bert", "electra"]:
+        if self.args.model_type in ["bert", "electra", "roformer", "roformer_v2"]:
+            logging.info(f"clean_text {self.args.clean_text}, ")
             tokenizer = BertWordPieceTokenizer(
                 clean_text=self.args.clean_text,
                 handle_chinese_chars=self.args.handle_chinese_chars,

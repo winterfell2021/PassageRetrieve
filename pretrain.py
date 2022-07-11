@@ -24,9 +24,11 @@ if __name__ == '__main__':
         "evaluate_during_training": False,
         "sliding_window": True,
         "use_multiprocessing": False,
-        "vocab_size": 22573,
+        "vocab_size": 30522,
         "fp16": False,
         "local_rank": -1,
+        "wandb_project": "DFPassageRetrieve",
+        "handle_chinese_chars": False
     }
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', type=str,
@@ -40,6 +42,8 @@ if __name__ == '__main__':
                         type=int, default=16, help='batch size')
     parser.add_argument("--local_rank", type=int, default=-1,
                         help="Local rank. Necessary for using the torch.distributed.launch utility.")
+    parser.add_argument("--resume", dest="model_name", type=str, default=None,
+                        help="")
     args = parser.parse_args()
 
     args.output_dir = os.path.join(args.output_dir, args.model)
@@ -57,7 +61,7 @@ if __name__ == '__main__':
     train_args['best_model_dir'] = os.path.join(train_args['output_dir'], 'best_model')
     model = LanguageModelingModel(
         args.model,
-        None,
+        args.model_name,
         args=train_args
     )
     model.train_model(
